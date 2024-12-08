@@ -53,7 +53,7 @@ export default function Home() {
             type="text"
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
-            className="w-full p-2 border rounded"
+            className="w-full p-2 border rounded text-black"
             placeholder="handle.bsky.social"
             required
           />
