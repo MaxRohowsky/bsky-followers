@@ -25,6 +25,23 @@ export default function Home() {
         Your Top 10 Bluesky followers with most followers
       </h1>
       
+      <div className="text-center mb-8">
+        <div className="text-sm text-gray-600">
+          Made by Max Rohowsky:
+          <a href="https://bsky.app/profile/maxrohowsky.bsky.social" className="hover:text-blue-500 mx-2">
+            Bluesky
+          </a>
+          <span>•</span>
+          <a href="https://x.com/MaxRohowsky" className="hover:text-blue-500 mx-2">
+            X (Twitter)
+          </a>
+          <span>•</span>
+          <a href="https://github.com/MaxRohowsky/bsky-followers" className="hover:text-blue-500 mx-2">
+            GitHub Repo
+          </a>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
         <div>
           <label className="block mb-2">Bluesky Handle (without @)</label>
