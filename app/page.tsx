@@ -37,8 +37,12 @@ export default function Home() {
           </a>
           <span>•</span>
           <a href="https://github.com/MaxRohowsky/bsky-followers" className="hover:text-blue-500 mx-2">
-            GitHub Repo
+            GitHub Repository
           </a>
+
+          <p className="text-xs text-gray-600 mt-2">
+            Note: Run this locally for better results. Vercel hosted version limits the number of requests.
+          </p>
         </div>
       </div>
 
