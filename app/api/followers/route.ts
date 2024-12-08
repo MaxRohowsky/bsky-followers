@@ -9,9 +9,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Get followers
+    // Get all followers
     const followersResponse = await fetch(
-      `https://public.api.bsky.app/xrpc/app.bsky.graph.getFollowers?actor=${handle}`
+      `https://public.api.bsky.app/xrpc/app.bsky.graph.getFollowers?actor=${handle}&limit=100`
     );
     
     if (!followersResponse.ok) {
@@ -19,45 +19,73 @@ export async function GET(request: Request) {
     }
 
     const followersData = await followersResponse.json();
-    
-    // Get profile info for each follower (in batches to avoid rate limiting)
     const followers = followersData.followers;
-    const batchSize = 5;
     const enrichedFollowers = [];
     
-    for (let i = 0; i < followers.length; i += batchSize) {
-      const batch = followers.slice(i, i + batchSize);
-      const profilePromises = batch.map(async (follower: any) => {
-        const profileResponse = await fetch(
-          `https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${follower.handle}`
-        );
-        const profile = await profileResponse.json();
-        return {
-          handle: follower.handle,
-          displayName: profile.displayName,
-          followersCount: profile.followersCount || 0,
-        };
-      });
-      
-      const batchResults = await Promise.all(profilePromises);
-      enrichedFollowers.push(...batchResults);
-      
-      // Add a small delay between batches to avoid rate limiting
-      if (i + batchSize < followers.length) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+    // Create a Response.stream
+    const stream = new TransformStream();
+    const writer = stream.writable.getWriter();
+    const encoder = new TextEncoder();
+
+    // Start the stream
+    const response = new Response(stream.readable, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
+
+    // Process followers and send updates
+    (async () => {
+      try {
+        for (const follower of followers) {
+          try {
+            const profileResponse = await fetch(
+              `https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${follower.handle}`
+            );
+            
+            if (profileResponse.ok) {
+              const profile = await profileResponse.json();
+              enrichedFollowers.push({
+                handle: follower.handle,
+                displayName: profile.displayName,
+                followersCount: profile.followersCount || 0,
+              });
+
+              // Sort and get top 10 for each update
+              const topFollowers = [...enrichedFollowers]
+                .sort((a, b) => b.followersCount - a.followersCount)
+                .slice(0, 10);
+
+              // Send the update
+              await writer.write(
+                encoder.encode(`data: ${JSON.stringify(topFollowers)}\n\n`)
+              );
+            }
+            
+            // Delay between requests
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } catch (error) {
+            console.error(`Error fetching profile for ${follower.handle}:`, error);
+            continue;
+          }
+        }
+
+        // Close the stream
+        await writer.close();
+      } catch (error) {
+        console.error('Stream error:', error);
+        await writer.abort(error);
       }
-    }
+    })();
 
-    // Sort by followers count
-    const sortedFollowers = enrichedFollowers.sort(
-      (a, b) => b.followersCount - a.followersCount
-    );
-
-    return NextResponse.json(sortedFollowers);
+    return response;
+    
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in followers API route:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch followers data' },
+      { error: 'Failed to fetch followers' }, 
       { status: 500 }
     );
   }

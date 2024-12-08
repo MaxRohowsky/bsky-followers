@@ -1,14 +1,17 @@
 'use client';
 import { useState } from 'react';
 import FollowersList from './components/FollowersList';
+import ProfileCard from './components/ProfileCard';
 
 export default function Home() {
   const [handle, setHandle] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [shouldFetch, setShouldFetch] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
+    setShouldFetch(true);
   };
 
   return (
@@ -37,7 +40,12 @@ export default function Home() {
         </button>
       </form>
 
-      {submitted && handle && <FollowersList handle={handle} />}
+      {submitted && handle && (
+        <div className="space-y-8 mt-8">
+          <ProfileCard handle={handle} />
+          <FollowersList handle={handle} shouldFetch={shouldFetch} />
+        </div>
+      )}
     </main>
   );
 } 

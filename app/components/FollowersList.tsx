@@ -9,52 +9,86 @@ interface Follower {
 
 interface FollowersListProps {
   handle: string;
+  shouldFetch: boolean;
 }
 
-export default function FollowersList({ handle }: FollowersListProps) {
+export default function FollowersList({ handle, shouldFetch }: FollowersListProps) {
   const [followers, setFollowers] = useState<Follower[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [processedCount, setProcessedCount] = useState(0);
 
   useEffect(() => {
-    async function fetchFollowers() {
+    if (!shouldFetch) return;
+
+    const fetchFollowers = async () => {
       try {
         setLoading(true);
         setError(null);
-        
+        setProcessedCount(0);
+        setFollowers([]);
+
         const response = await fetch(`/api/followers?handle=${encodeURIComponent(handle)}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch followers');
-        }
+        if (!response.ok) throw new Error('Failed to fetch followers');
         
-        const data = await response.json();
-        setFollowers(data);
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('Failed to read response');
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          
+          // Process complete messages
+          buffer = lines.pop() || '';
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = JSON.parse(line.slice(6));
+              setFollowers(data);
+              setProcessedCount(prev => prev + 1);
+            }
+          }
+        }
+
+        setLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
         setLoading(false);
       }
-    }
+    };
 
     fetchFollowers();
-  }, [handle]);
-
-  if (loading) return <div className="text-center mt-8">Loading...</div>;
-  if (error) return <div className="text-red-500 text-center mt-8">{error}</div>;
+  }, [handle, shouldFetch]);
 
   return (
     <div className="max-w-md mx-auto mt-8">
-      <h2 className="text-xl font-bold mb-4">Followers for @{handle} (Sorted by Follower Count)</h2>
+      <h2 className="text-xl font-bold mb-4">Top 10 followers with highest follower count:</h2>
+      <p className="text-sm text-gray-500 mb-4">Note: Due to rate limiting, list populates with delay and may not be complete.</p>
+      {loading && (
+        <div className="text-center mb-4 text-gray-600">
+          Processing... ({processedCount} iterations)
+        </div>
+      )}
+      {error && <div className="text-red-500 text-center mb-4">{error}</div>}
       <ul className="space-y-2">
-        {followers.map((follower) => (
+        {followers.map((follower, index) => (
           <li
             key={follower.handle}
-            className="p-4 border rounded hover:bg-gray-50"
+            className="p-4 border rounded hover:bg-gray-50 flex"
           >
-            <div className="font-bold">{follower.displayName || follower.handle}</div>
-            <div className="text-gray-600">@{follower.handle}</div>
-            <div className="text-sm text-gray-500">
-              {follower.followersCount.toLocaleString()} followers
+            <span className="mr-4 font-bold">{index + 1}.</span>
+            <div>
+              <div className="font-bold">{follower.displayName || follower.handle}</div>
+              <div className="text-gray-600">@{follower.handle}</div>
+              <div className="text-sm text-gray-500">
+                {follower.followersCount.toLocaleString()} followers
+              </div>
             </div>
           </li>
         ))}
