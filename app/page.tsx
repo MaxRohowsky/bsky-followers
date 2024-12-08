@@ -14,10 +14,15 @@ export default function Home() {
     setShouldFetch(true);
   };
 
+  const handleCancel = () => {
+    setShouldFetch(false);
+    setSubmitted(false);
+  };
+
   return (
     <main className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold text-center mb-8">
-        Bluesky Followers Analytics
+        Your Top 10 Bluesky followers with most followers
       </h1>
       
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto">
@@ -32,12 +37,22 @@ export default function Home() {
             required
           />
         </div>
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-        >
-          Show Followers
-        </button>
+        {!submitted ? (
+          <button
+            type="submit"
+            className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+          >
+            Show Followers
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="w-full bg-red-500 text-white p-2 rounded hover:bg-red-600"
+          >
+            Cancel
+          </button>
+        )}
       </form>
 
       {submitted && handle && (

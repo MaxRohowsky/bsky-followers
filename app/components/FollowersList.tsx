@@ -19,7 +19,10 @@ export default function FollowersList({ handle, shouldFetch }: FollowersListProp
   const [processedCount, setProcessedCount] = useState(0);
 
   useEffect(() => {
-    if (!shouldFetch) return;
+    if (!shouldFetch) {
+      setLoading(false);
+      return;
+    }
 
     const fetchFollowers = async () => {
       try {
@@ -37,14 +40,13 @@ export default function FollowersList({ handle, shouldFetch }: FollowersListProp
         const decoder = new TextDecoder();
         let buffer = '';
 
-        while (true) {
+        while (shouldFetch) {
           const { done, value } = await reader.read();
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           
-          // Process complete messages
           buffer = lines.pop() || '';
           
           for (const line of lines) {
@@ -54,6 +56,10 @@ export default function FollowersList({ handle, shouldFetch }: FollowersListProp
               setProcessedCount(prev => prev + 1);
             }
           }
+        }
+
+        if (!shouldFetch) {
+          reader.cancel();
         }
 
         setLoading(false);
