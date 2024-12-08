@@ -41,7 +41,7 @@ export default function Home() {
           </a>
 
           <p className="text-xs text-gray-600 mt-2">
-            Note: Run this locally for better results. Vercel hosted version limits the number of requests.
+            <span className="text-red-500">Note: Run this locally for better results. Vercel hosted version limits the number of requests.</span>
           </p>
         </div>
       </div>
